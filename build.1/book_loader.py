@@ -3,6 +3,7 @@ import happybase
 import time
 import nltk
 
+verbose = True if '-v' in sys.argv else False
 row_count = 0
 batch_size = 1000
 start_time = time.time()
@@ -38,8 +39,8 @@ def connect_to_hbase(tb):
     batch = table.batch(batch_size = batch_size)
     return conn, batch
 
-def insert_row(batch, data, tile):
-    row_key = str(row_count)
+def insert_row(s, batch, data, tile):
+    row_key = str(s)
     data_text = { "sentence:text":data[0] }
     data_words = {'words:'+el:'0' for el in data[1]}
     data_agents = {'agents:'+el:'0' for el in data[2]}
@@ -48,27 +49,27 @@ def insert_row(batch, data, tile):
     #print(row_key, data[0] )
     batch.put( row_key, data_dict)
 
-print ("Connecting to HBase and creating a table name: ", table_name)
+print ("Conectando a HBase y creando la tabla: ", table_name)
 conn, batch = connect_to_hbase(table_name)
-print ("Connect to HBase. table name: ", table_name,", batch size:", batch_size)
-file = open(file_path, "r")
-print ("Connected to file. name: ", file_path)    
+print ("Conactadoa HBase. Tabla: ", table_name,", batch size:", batch_size)
 try:
-    text = file.read()    
-    texttiling = nltk.tokenize.texttiling.TextTilingTokenizer(w=20, k=10,similarity_method=0, stopwords=None, smoothing_method=[0], smoothing_width=2, smoothing_rounds=1, cutoff_policy=1, demo_mode=False)
-    tiles = texttiling.tokenize(text) # same text returned
-    tile_count=1
-    for tile in tiles:
-        sent_text = nltk.sent_tokenize(tile)
-        for sentence in sent_text:
-            row_count += 1
-            tokens = nltk.word_tokenize(sentence) 
-            tagged = nltk.pos_tag(tokens)
-            agents = [s[0] for s in tagged if s[1] in tags_pn]          
-            tagged = [s[0] for s in tagged if s[1] in tags_comp]
-            insert_row(batch, [ sentence, tagged, agents ], tile_count)
-        tile_count += 1
-    batch.send()    
+    with open(file_path, "r") as file:
+        text = file.read()
+        print ("Conectado a archivo. Nombre: ", file_path)
+        print ("Texto tokenizado en párrafos")
+        for p,paragraph in enumerate(text.split("\n\n")):
+            if verbose: print("Tokenizando párrado #",p,":\n", paragraph[:20]+"...")
+            sent_text = nltk.sent_tokenize(paragraph) 
+            for s,sentence in enumerate(sent_text):   
+                if verbose: print("Analizando oración #",s,":\n",sentence)                   
+                tokens = nltk.word_tokenize(sentence) 
+                tagged = nltk.pos_tag(tokens)
+                agents = [s[0] for s in tagged if s[1] in tags_pn]          
+                tagged = [s[0] for s in tagged if s[1] in tags_comp]
+                insert_row(s, batch, [ sentence, tagged, agents ], p)
+                row_count += 1
+         
+        batch.send()    
 finally:
     # No matter what happens, close the file handle.
     conn.close()

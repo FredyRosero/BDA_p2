@@ -62,7 +62,7 @@ def compute_sentences(setences_rows,table,batch):
                 sentence_agents.append(c_key) #O
                 agent_count += 1                             
         # Calcular la polaridad de la oración actual
-        sente_pola = polarity/word_count if not word_count == 0 else "None"
+        sente_pola = round(polarity/word_count,5) if not word_count == 0 else "None"
         # Almacenar valor de polaridad en objeto a insertar
         sentences[key]["polarity:value"] = str(sente_pola)                        
         if verbose: print(str(key),sentences[key])   
@@ -99,7 +99,7 @@ def merge_duplicates(relations):
     for el in final_list:
         el[1]=el[1][7:]
         el[2]=el[2][7:]
-        if el[3]!='None': el[3] = el[3] / el[4]
+        if el[3]!='None': el[3] = round(el[3] / el[4],5)
         el.pop(0)
     return final_list 
 
